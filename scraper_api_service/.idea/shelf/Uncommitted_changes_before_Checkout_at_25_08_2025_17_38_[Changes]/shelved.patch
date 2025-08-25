@@ -1,0 +1,127 @@
+Index: ../telegram_bot_service/.env
+===================================================================
+diff --git a/../telegram_bot_service/.env b/../telegram_bot_service/.env
+--- a/../telegram_bot_service/.env	(revision 32e853b4fbcda72af66bb8834cea6aaf34a525b3)
++++ b/../telegram_bot_service/.env	(date 1756121666255)
+@@ -1,0 +1,1 @@
++TELEGRAM_TOKEN=8340986151:AAF2NEC4zTCg-mXIT-c_z_qREkOqN-YtAmk
+Index: ../telegram_bot_service/config.py
+===================================================================
+diff --git a/../telegram_bot_service/config.py b/../telegram_bot_service/config.py
+--- a/../telegram_bot_service/config.py	(revision 32e853b4fbcda72af66bb8834cea6aaf34a525b3)
++++ b/../telegram_bot_service/config.py	(date 1756121841272)
+@@ -1,0 +1,7 @@
++import os
++from dotenv import load_dotenv
++
++load_dotenv()
++
++TELEGRAM_TOKEN=os.getenv("TELEGRAM_TOKEN")
++API_URL=os.getenv("API_URL") or "http://127.0.0.1:8000/api/jobs/"
+Index: ../telegram_bot_service/services/api_client.py
+===================================================================
+diff --git a/../telegram_bot_service/services/api_client.py b/../telegram_bot_service/services/api_client.py
+--- a/../telegram_bot_service/services/api_client.py	(revision 32e853b4fbcda72af66bb8834cea6aaf34a525b3)
++++ b/../telegram_bot_service/services/api_client.py	(date 1756122796705)
+@@ -1,0 +1,30 @@
++import requests
++from config import API_URL
++
++# services/api_client.py
++import httpx
++
++API_BASE_URL = "https://remoteok.com/api"
++
++async def get_jobs(keyword, page=1):
++    async with httpx.AsyncClient() as client:
++        resp = await client.get(API_BASE_URL, params={"search": keyword, "page": page})
++        if resp.status_code == 200:
++            data = resp.json()
++            return data or []
++        return []
++
++
++
++# def search_jobs(query, page=1):
++#     resp = requests.get(API_URL, params={"search": query, "page": page})
++#     if resp.status_code == 200:
++#         return resp.json()
++#     return []
++
++async def get_job_detail(job_id):
++    async with httpx.AsyncClient() as client:
++        resp = await client.get(f"{API_URL}{job_id}/")
++        if resp.status_code == 200:
++            return resp.json()
++        return None
+Index: ../telegram_bot_service/bot.py
+===================================================================
+diff --git a/../telegram_bot_service/bot.py b/../telegram_bot_service/bot.py
+--- a/../telegram_bot_service/bot.py	(revision 32e853b4fbcda72af66bb8834cea6aaf34a525b3)
++++ b/../telegram_bot_service/bot.py	(date 1756123257535)
+@@ -1,0 +1,65 @@
++import logging
++import asyncio
++from aiogram import Bot, Dispatcher, types
++from aiogram.filters import Command
++from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
++
++# from config import TELEGRAM_TOKEN
++from services.api_client import get_jobs   # API xizmatidan ishlar ro‘yxatini olish
++
++TELEGRAM_TOKEN = "8340986151:AAF2NEC4zTCg-mXIT-c_z_qREkOqN-YtAmk"
++
++logging.basicConfig(level=logging.INFO)
++bot = Bot(token=TELEGRAM_TOKEN)
++dp = Dispatcher()
++
++@dp.message(Command(commands=["start", "help"]))
++async def send_welcome(message: types.Message):
++    await message.reply("👋 Ish o‘rinlari botiga xush kelibsiz!\n"
++                        "🔎 Qidirish uchun inline rejimidan foydalaning:\n"
++                        "`@DevVakansBot kalit_so'z`")
++
++
++@dp.inline_query()
++async def inline_jobs(query: types.InlineQuery):
++    keyword = query.query.strip()
++    offset = int(query.offset or 0)
++
++    if not keyword:
++        await query.answer([], cache_time=1)
++        return
++
++    jobs = await get_jobs(keyword)
++
++    results = []
++    for job in jobs[offset: offset + 10]:
++        title = (job.get("slug") or "").strip()
++        if not title:
++            continue
++        company = (job.get("company") or "").strip()
++        url = (job.get("url") or "").strip()
++        _id = str(job.get("id") or "1")
++
++        results.append(
++            InlineQueryResultArticle(
++                id=_id,
++                title=title,
++                description=company,
++                input_message_content=InputTextMessageContent(
++                    message_text=f"💼 {title}\n🏢 {company}\n🔗 {url}" if url else f"💼 {title}\n🏢 {company}"
++                ),
++            )
++        )
++
++    next_offset = str(offset + 10) if len(jobs) > offset + 10 else ""
++
++    await query.answer(results, cache_time=1, is_personal=True, next_offset=next_offset)
++
++
++async def main():
++    logging.info("🤖 Bot ishga tushdi...")
++    await dp.start_polling(bot)
++
++
++if __name__ == "__main__":
++    asyncio.run(main())
