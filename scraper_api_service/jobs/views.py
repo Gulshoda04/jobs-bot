@@ -1,4 +1,3 @@
-# jobs/views.py
 from rest_framework import generics, filters
 from .models import Job
 from .serializers import JobSerializer
@@ -14,7 +13,7 @@ class JobListAPIView(generics.ListAPIView):
     serializer_class = JobSerializer
     pagination_class = JobPagination
     filter_backends = [filters.SearchFilter]
-    search_fields = ['title', 'company']  # bu yerda search ishlaydi
+    search_fields = ['title', 'company']
 
 class JobDetailAPIView(generics.RetrieveAPIView):
     queryset = Job.objects.all()

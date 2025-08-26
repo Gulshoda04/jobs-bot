@@ -4,6 +4,7 @@ class Job(models.Model):
     title = models.CharField(max_length=255)
     company = models.CharField(max_length=255)
     url = models.URLField()
+    location = models.CharField(max_length=255, blank=True, null=True)
     posted_at = models.DateTimeField()
     scraped_at = models.DateTimeField(auto_now_add=True)
 

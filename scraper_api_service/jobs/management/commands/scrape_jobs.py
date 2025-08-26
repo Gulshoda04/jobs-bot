@@ -1,8 +1,11 @@
 from django.core.management.base import BaseCommand
-from jobs.models import Job
+# from jobs.models import Job
 import requests
 from bs4 import BeautifulSoup
 from django.utils import timezone
+
+from scraper_api_service.jobs.models import Job
+
 
 class Command(BaseCommand):
     help = "Scrape jobs from remoteok.com"
@@ -12,9 +15,9 @@ class Command(BaseCommand):
         response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
         soup = BeautifulSoup(response.text, "html.parser")
 
-        jobs = soup.find_all("tr", class_="job")
+        job_rows = soup.find_all("tr", class_="job")
 
-        for job in jobs:
+        for job in job_rows:
             title = job.find("h2")
             company = job.find("h3")
             link = "https://remoteok.com"
